@@ -1,0 +1,216 @@
+/* Regador automático para 2 Bonsais, utilizando Arduino, bomba d'água de fontes de
+jardim, sensor de umidade do solo, LCD de 16x2 e Servo motor*/
+#include <EEPROM.h>
+#include <Servo.h>  //Inclui a biblioteca do Servo
+#include <LiquidCrystal.h>  //Inclui a biblioteca do LCD
+LiquidCrystal lcd(12, 11, 5, 4, 3, 2); //Configura os pinos do Arduino para se comunicar com o LCD
+Servo servo1;            //Cria um objeto servo
+int Bomba_agua = 6;      //Relé que aciona a bomba de água
+byte BUZZER = 7;         //Aciona um aviso sonoro de bomba ligada
+int Button0 = 9;
+int Button1 = 10;
+int Button2 = 13;
+int Sensor_bonsai1 = 0;  //Sensor do bonsai 1
+int Sensor_bonsai2 = 1;  //Sensor do bonsai 1  
+int pot_min = 2;
+int pot_max = 3;
+float medicaoB1; //fl
+float medicaoB2; //fl
+float Valorlido; //fl
+float valorminimo; //fl
+float aciona_bomba; //fl
+float valormaximo; //fl
+float desliga_bomba; //fl
+int buttonState;
+int buttonState2;
+int mostraB1 = 1;
+int mostraB2 = 1;
+int EEPL2min = 0;
+int EEPL2max = 4;
+
+void setup(){
+  
+  pinMode(Bomba_agua, OUTPUT);
+  pinMode(BUZZER, OUTPUT);
+  pinMode(Button0, INPUT);
+  pinMode(Button1, INPUT);
+  pinMode(Button2, INPUT);
+  lcd.begin(16, 2);     //Inicia o LCD com dimensões 16x2(Colunas x Linhas)
+  lcd.setCursor(4, 0);  //Posiciona o cursor na primeira coluna(0) e na primeira linha(0) do LCD
+  lcd.print("BABA DE"); //Escreve no LCD "cuidador de"
+  lcd.setCursor(4, 1);  //Posiciona o cursor na primeira coluna(0) e na segunda linha(1) do LCD
+  lcd.print("BONSAI");  //Escreve no LCD "Bonsai"
+  servo1.attach(8);     //Anexa o servo (físico), no pino 8, ao objeto servo (lógico)
+  servo1.write(90);
+  delay(1000);
+  lcd.clear();
+}
+
+void loop(){
+    
+  //____ VERIFICA E ARMAZENA A LEITURA DO SENSOR DO BONSAI 1_________
+  medicaoB1 = map(analogRead(Sensor_bonsai1), 0, 1023, 0, 100);  
+  
+  //____ VERIFICA E ARMAZENA A LEITURA DO SENSOR DO BONSAI 2_________
+  medicaoB2 = map(analogRead(Sensor_bonsai2), 0, 1023, 0, 100);
+ 
+  //_____DEFINI O VALOR MINIMO DE UMIDADE P/ACIONAR A BOMBA DE ÁGUA________  
+  aciona_bomba = map(analogRead(pot_min), 0, 1023, 0, 100);
+   
+  //_____DEFINI O VALOR MÁXIMO DE UMIDADE P/DESLIGAR A BOMBA DE ÁGUA________
+  desliga_bomba = map(analogRead(pot_max), 0, 1023, 0, 100);
+  
+  if (digitalRead(Button2) == LOW){
+  delay(500);
+  teste();
+  lcd.clear();
+  delay(500);
+  }
+  //_____CHAMA ROTINA DO DISPLAY 16X2____________ 
+  Painel ();
+ 
+  //_____TESTA NIVEL DO BONSAI 1. SE ESTIVER BAIXO ACIONA REGAB1_____
+ // if (medicaoB1 <= aciona_bomba){
+    //  RegaB1();
+   // }
+ // if (medicaoB2 <= aciona_bomba){
+  //  RegaB2(); 
+  //}
+  
+  
+}      //********* FIM DA FUNÇÃO LOOP ***************
+ 
+ /*___________________________________________________________________________________*/
+ 
+void teste(){
+   lcd.clear();
+   int MIN;
+   switch (mostraB2){
+   case 1:
+   while (digitalRead(Button2) == HIGH){
+   lcd.setCursor(0, 1);      //Posiciona o cursor na primeira coluna(0) e na primeira linha(0) do LCD
+   lcd.print("Limite Min: "); //Escreve no LCD "UMIDADE(%):"
+   lcd.setCursor(12, 1);     //Posiciona o cursor na primeira coluna(0) e na segunda linha(1) do LCD
+   lcd.print(MIN);     //Escreve no LCD o valor de "medicaoB1"
+   if (digitalRead(Button0) == LOW) MIN --;
+   delay(50);
+   if (digitalRead(Button1) == LOW) MIN ++;
+   delay(50);
+   delay(50);
+   if (MIN >= 100) MIN = 0;
+   delay(50);  
+   break;
+   
+   case 2:
+   lcd.setCursor(0, 1);      //Posiciona o cursor na primeira coluna(0) e na primeira linha(0) do LCD
+   lcd.print("Limite Max: "); //Escreve no LCD "UMIDADE(%):"
+   lcd.setCursor(12, 1);     //Posiciona o cursor na primeira coluna(0) e na segunda linha(1) do LCD
+   lcd.print(desliga_bomba);     //Escreve no LCD o valor de "medicaoB1"
+   break;
+   
+   case 3:
+   mostraB2 = 1;
+   break;
+ }
+}
+}
+        //********* FUNÇÕES***************************
+void RegaB1(){
+   while (medicaoB1 < desliga_bomba){
+   digitalWrite(Bomba_agua, HIGH);
+   digitalWrite(BUZZER, HIGH);
+   servo1.write(150);
+   lcd.setCursor(0, 1);      //Posiciona o cursor na primeira coluna(0) e na primeira linha(0) do LCD
+   lcd.print("  Rega Bonsai 1 "); //Escreve no LCD "UMIDADE(%):"
+   lcd.setCursor(0, 0);      //Posiciona o cursor na primeira coluna(0) e na primeira linha(0) do LCD
+   lcd.print("UMIDADE B1:"); //Escreve no LCD "UMIDADE(%):"
+   lcd.setCursor(12, 0);     //Posiciona o cursor na primeira coluna(0) e na segunda linha(1) do LCD
+   lcd.print(medicaoB1);     //Escreve no LCD o valor de "medicaoB1"
+   Valorlido = analogRead(Sensor_bonsai1);
+   medicaoB1 = ((Valorlido / 1023)* 100);
+   valormaximo = analogRead(pot_max);
+   desliga_bomba = ((valormaximo / 1023)* 100);
+   }
+   Desl_bomba();   
+}
+
+void RegaB2(){
+   while (medicaoB2 < desliga_bomba){
+   digitalWrite(Bomba_agua, HIGH);
+   digitalWrite(BUZZER, HIGH);
+   servo1.write(30);
+   lcd.setCursor(0, 1);      //Posiciona o cursor na primeira coluna(0) e na primeira linha(0) do LCD
+   lcd.print("  Rega Bonsai 2 "); //Escreve no LCD "UMIDADE(%):"
+   lcd.setCursor(0, 0);      //Posiciona o cursor na primeira coluna(0) e na primeira linha(0) do LCD
+   lcd.print("UMIDADE B2:"); //Escreve no LCD "UMIDADE(%):"
+   lcd.setCursor(12, 0);     //Posiciona o cursor na primeira coluna(0) e na segunda linha(1) do LCD
+   lcd.print(medicaoB2);     //Escreve no LCD o valor de "medicaoB1"
+   Valorlido = analogRead(Sensor_bonsai2);
+   medicaoB2 = ((Valorlido / 1023)* 100);
+   valormaximo = analogRead(pot_max);
+   desliga_bomba = ((valormaximo / 1023)* 100);
+   }
+   Desl_bomba();   
+}  
+   
+void Desl_bomba(){
+  digitalWrite(Bomba_agua, LOW);
+  digitalWrite(BUZZER, LOW);
+  servo1.write(90);
+}
+
+void Painel(){
+  //_____SELECIONA O SENSOR DE UMIDADE QUE VAI APARECER NA LINHA 1 DO DISPLAY_____
+  buttonState = digitalRead(Button0);
+  delay(200);
+  if ( buttonState == LOW){
+  mostraB1 ++;  
+  }
+   switch (mostraB1){
+   case 1:
+   lcd.setCursor(0, 0);      //Posiciona o cursor na primeira coluna(0) e na primeira linha(0) do LCD
+   lcd.print("UMIDADE B1:"); //Escreve no LCD "UMIDADE(%):"
+   lcd.setCursor(12, 0);     //Posiciona o cursor na primeira coluna(0) e na segunda linha(1) do LCD
+   lcd.print(medicaoB1);     //Escreve no LCD o valor de "medicaoB1"
+   break;
+   case 2:
+   lcd.setCursor(0, 0);      //Posiciona o cursor na primeira coluna(0) e na primeira linha(0) do LCD
+   lcd.print("UMIDADE B2:"); //Escreve no LCD "UMIDADE(%):"
+   lcd.setCursor(12, 0);     //Posiciona o cursor na primeira coluna(0) e na segunda linha(1) do LCD
+   lcd.print(medicaoB2);     //Escreve no LCD o valor de "medicaoB1"
+   break;
+   case 3:
+   mostraB1 = 1;
+   break;
+ }
+  //_____SELECIONA O SENSOR DE UMIDADE QUE VAI APARECER NA LINHA 2 DO DISPLAY_____
+ buttonState2 = digitalRead(Button1);
+  delay(200);
+  if ( buttonState2 == LOW){
+  mostraB2 ++;  
+  }
+   switch (mostraB2){
+   case 1:
+   lcd.setCursor(0, 1);      //Posiciona o cursor na primeira coluna(0) e na primeira linha(0) do LCD
+   lcd.print("Limite Min: "); //Escreve no LCD "UMIDADE(%):"
+   lcd.setCursor(12, 1);     //Posiciona o cursor na primeira coluna(0) e na segunda linha(1) do LCD
+   lcd.print(aciona_bomba);     //Escreve no LCD o valor de "medicaoB1"
+   break;
+   
+   case 2:
+   lcd.setCursor(0, 1);      //Posiciona o cursor na primeira coluna(0) e na primeira linha(0) do LCD
+   lcd.print("Limite Max: "); //Escreve no LCD "UMIDADE(%):"
+   lcd.setCursor(12, 1);     //Posiciona o cursor na primeira coluna(0) e na segunda linha(1) do LCD
+   lcd.print(desliga_bomba);     //Escreve no LCD o valor de "medicaoB1"
+   break;
+   
+   case 3:
+   mostraB2 = 1;
+   break;
+ }
+ 
+}
+  
+  
+
+
